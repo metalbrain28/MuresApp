@@ -25,3 +25,28 @@ require([
     });
 });
 
+(function () {
+    // var landing = new Landing();
+    var login = new Login();
+    var register = new Register();
+    login.initialize();
+    register.initialize();
+
+
+    $("#logout-link").on("click", function(e) {
+        $.ajax({
+            url: "homepage/logout",
+            method: "GET",
+            dataType: "json",
+            success: _.bind(function() {
+                $(".invalid-data").addClass("hidden");
+
+                window.location.reload();
+
+            }, this),
+            error: function(res, err) {
+                console.log("Fail logout");
+            }
+        });
+    });
+})($);
