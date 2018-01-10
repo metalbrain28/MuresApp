@@ -5,13 +5,14 @@ require([
     'esri/Color',
     'esri/graphic',
     'dojo/request',
+    "esri/InfoTemplate",
+    "esri/symbols/SimpleLineSymbol",
     'dojo/domReady!'
-], function (Map, Point, SimpleMarkerSymbol, Color, Graphic, request) {
+], function (Map, Point, SimpleMarkerSymbol, Color, Graphic, request, InfoTemplate, SimpleLineSymbol) {
     var map = new Map("map", {
         center: [21.655, 46.075],
         zoom: 10,
-        basemap: "streets",
-        height: 800
+        basemap: "streets"
     });
 
     map.on('load', function () {
@@ -27,6 +28,45 @@ require([
 
         drawStations();
     });
+
+    var symbol = new SimpleMarkerSymbol(
+        SimpleMarkerSymbol.STYLE_CIRCLE,
+        12,
+        new SimpleLineSymbol(
+            SimpleLineSymbol.STYLE_NULL,
+            new Color([247, 34, 101, 0.9]),
+            1
+        ),
+        new Color([207, 34, 171, 0.5])
+    );
+
+    let lastPoint = null;
+    var point = null;
+
+    map.on("click", function(evt){
+        point = new Graphic(evt.mapPoint, symbol);
+        map.graphics.add(point);
+        var form = "<b>Latitude: </b>" + evt.mapPoint.getLatitude() + "<br><br> <b>Longitude: </b>" + evt.mapPoint.getLongitude() + "<br><br><form id='add_point'> Describe issue:<br><input type=" + "'text'" + "name=" + "'describe'" + "><br><br><input type=" + "'submit'" + " class='submit-incident' value=" + "'Submit'" + "></form> ";
+
+        map.infoWindow.setContent(form);
+        map.infoWindow.show(evt.mapPoint);
+
+        removeMapClickBullet();
+    });
+
+    $(document).on("click", ".submit-incident", function(e) {
+        e.preventDefault();
+
+        map.graphics.add(point);
+    });
+
+    function removeMapClickBullet() {
+        if (lastPoint) {
+            map.graphics.remove(lastPoint);
+        }
+
+        lastPoint = point;
+    }
 
     function drawStations() {
         request("/stations").then(
