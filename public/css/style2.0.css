@@ -235,3 +235,10 @@ input.error {
     -webkit-transform: translate(50px);
     transform: translate(50px);
 }
+
+.esriSimpleSliderTL {
+    bottom: auto;
+    right: auto;
+    top: 75px;
+    left: 15px;
+}
