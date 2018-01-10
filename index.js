@@ -28,7 +28,7 @@ app.get('/', (req, res) => {
 });
 
 app.get('/stations', (req, res) => {
-    let sql = `SELECT * FROM Stations WHERE RiverName = "MURES"`;
+    let sql = `SELECT * FROM Stations`;
 
     db.all(sql, [], (err, rows) => {
         if (err) {
