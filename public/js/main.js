@@ -4,14 +4,16 @@ require([
     'esri/symbols/SimpleMarkerSymbol',
     'esri/Color',
     'esri/graphic',
+    'dojo/request',
     'dojo/domReady!'
-], function (Map, Point, SimpleMarkerSymbol, Color, Graphic) {
+], function (Map, Point, SimpleMarkerSymbol, Color, Graphic, request) {
     var map = new Map("map", {
         center: [21.655, 46.075],
         zoom: 10,
         basemap: "streets",
         height: 800
     });
+
     map.on('load', function () {
         var myPoint = new Point(20.92, 46.11);
         var symbol = new SimpleMarkerSymbol().setColor(new Color('blue'));
@@ -22,11 +24,30 @@ require([
         symbol = new SimpleMarkerSymbol().setColor(new Color('blue'));
         graphic = new Graphic(myPoint, symbol);
         map.graphics.add(graphic);
+
+        drawStations();
     });
+
+    function drawStations() {
+        request("/stations").then(
+            function(data){
+                var jsonData = JSON.parse(data);
+
+                _.map(jsonData, function(item) {
+                    var myPoint = new Point(item.Longitude, item.Latitude);
+                    var symbol = new SimpleMarkerSymbol().setColor(new Color('green'));
+                    var graphic = new Graphic(myPoint, symbol);
+                    map.graphics.add(graphic);
+                });
+            },
+            function(error){
+                console.log("An error occurred: " + error);
+            }
+        );
+    }
 });
 
 (function () {
-    // var landing = new Landing();
     var login = new Login();
     var register = new Register();
     login.initialize();

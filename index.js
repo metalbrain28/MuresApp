@@ -1,6 +1,14 @@
 const express = require('express');
 const mustacheExpress = require('mustache-express');
 const app = express();
+const sqlite3 = require('sqlite3').verbose();
+
+let db = new sqlite3.Database('../river.db', sqlite3.OPEN_READWRITE, (err) => {
+    if (err) {
+        console.error(err.message);
+    }
+    console.log('Connected to the river database.');
+});
 
 //body-parser
 var bodyParser = require('body-parser');
@@ -19,6 +27,18 @@ app.get('/', (req, res) => {
     res.render('index', {});
 });
 
+app.get('/stations', (req, res) => {
+    let sql = `SELECT * FROM Stations WHERE RiverName = "MURES"`;
+
+    db.all(sql, [], (err, rows) => {
+        if (err) {
+            throw err;
+        }
+
+        res.send(JSON.stringify(rows));
+    });
+});
+
 
 app.get('/add', (req, res) => {
     console.log("Latitude: " + req.query['latitude']);
@@ -32,3 +52,7 @@ app.get('/add', (req, res) => {
 
 
 app.listen(3001, () => console.log('Example app listening on port 3001!'));
+
+process.on('exit', function() {
+    db.close();
+});
