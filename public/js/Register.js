@@ -17,8 +17,7 @@ Register.prototype = {
         e.preventDefault();
 
         var base_elements = {
-            first_name: $(this.el).find('#firstname'),
-            last_name: $(this.el).find('#lastname'),
+            name: $(this.el).find('#fillname'),
             email: $(this.el).find('#email'),
             pass: $(this.el).find('#password'),
             confpass: $(this.el).find('#confirm-password')
@@ -33,25 +32,24 @@ Register.prototype = {
 
     sendForm: function(e) {
         var data = {
-            first_name: $(this.el).find('#firstname').val(),
-            last_name: $(this.el).find('#lastname').val(),
+            name: $(this.el).find('#fullname').val(),
             email: $(this.el).find('#email').val(),
             pass: $(this.el).find('#password').val(),
             phone: $(this.el).find('#phone').val(),
             interests: JSON.stringify($(this.el).find('#interests').val())
         };
 
+        console.log(data);
+
         $.ajax({
-            url: "register/register_user",
+            url: "/register",
             method: "POST",
             data: data,
             dataType: "json",
             success: _.bind(function(err) {
                 console.log ("Registered");
                 if (!err.length) {
-
                     $(document).trigger("login", [data.email, data.pass]);
-
                 }
 
                 console.log(err);

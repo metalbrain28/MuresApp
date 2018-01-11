@@ -9,6 +9,11 @@ require([
     "esri/symbols/SimpleLineSymbol",
     'dojo/domReady!'
 ], function (Map, Point, SimpleMarkerSymbol, Color, Graphic, request, InfoTemplate, SimpleLineSymbol) {
+
+    let lastPoint = null;
+    var point = null;
+    var stations = [];
+
     var map = new Map("map", {
         center: [21.655, 46.075],
         zoom: 10,
@@ -40,9 +45,6 @@ require([
         new Color([207, 34, 171, 0.5])
     );
 
-    let lastPoint = null;
-    var point = null;
-
     map.on("click", function(evt){
         point = new Graphic(evt.mapPoint, symbol);
         map.graphics.add(point);
@@ -72,6 +74,7 @@ require([
         request("/stations").then(
             function(data){
                 var jsonData = JSON.parse(data);
+                stations = jsonData;
 
                 _.map(jsonData, function(item) {
                     var myPoint = new Point(item.Longitude, item.Latitude);
@@ -94,11 +97,10 @@ require([
     register.initialize();
 
 
-    $("#logout-link").on("click", function(e) {
+    $("#user_logout").on("click", function(e) {
         $.ajax({
-            url: "homepage/logout",
-            method: "GET",
-            dataType: "json",
+            url: "logout",
+            method: "POST",
             success: _.bind(function() {
                 $(".invalid-data").addClass("hidden");
 
