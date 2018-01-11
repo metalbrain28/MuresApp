@@ -125,6 +125,33 @@ app.get('/add', (req, res) => {
     });
 });
 
+app.post('/incidents', (req, res) => {
+    var nodemailer = require('nodemailer');
+
+    var transporter = nodemailer.createTransport({
+        service: 'gmail',
+        auth: {
+            user: 'potato.cat001@gmail.com',
+            pass: 'ilikepotatoes'
+        }
+    });
+
+    var mailOptions = {
+        from: 'potato.cat001@gmail.com',
+        to: 'moisa.anca10@gmail.com',
+        subject: 'Sending Email using Node.js',
+        text: 'That was easy!'
+    };
+
+    transporter.sendMail(mailOptions, function(error, info){
+        if (error) {
+            console.log(error);
+        } else {
+            console.log('Email sent!');
+        }
+    });
+});
+
 
 app.listen(3001, () => console.log('Example app listening on port 3001!'));
 
