@@ -7,8 +7,11 @@ require([
     'dojo/request',
     "esri/InfoTemplate",
     "esri/symbols/SimpleLineSymbol",
+    "esri/layers/CSVLayer",
+    "esri/renderers/SimpleRenderer",
     'dojo/domReady!'
-], function (Map, Point, SimpleMarkerSymbol, Color, Graphic, request, InfoTemplate, SimpleLineSymbol) {
+], function (Map, Point, SimpleMarkerSymbol, Color, Graphic, request, InfoTemplate, SimpleLineSymbol, CSVLayer, SimpleRenderer) {
+
     let lastPoint = null;
     var point = null;
     var stations = [];
@@ -22,6 +25,34 @@ require([
         zoom: 10,
         basemap: "streets"
     });
+
+    /* CSV initializer */
+    var csv = new CSVLayer("/csvs/Stations.csv", {});
+    var orangeRed = new Color([238, 69, 0, 0.5]);
+    var marker = new SimpleMarkerSymbol("solid", 15, null, orangeRed);
+    var renderer = new SimpleRenderer(marker);
+    csv.setRenderer(renderer);
+    var template = new InfoTemplate(
+        "${RecordReported}",
+        "${WaterbaseID}",
+        "${RiverName}",
+        "${WaterBodyName}",
+        "${CatchmentName}",
+        "${Longitude}",
+        "${Latitude}",
+        "${CatchmentArea}",
+        "${PH}",
+        "${Salinity}",
+        "${Depth}",
+        "${Algae}",
+        "${Nitrate}",
+        "${RefinedOil}",
+        "${Tss}",
+        "${TDS}"
+    );
+    csv.setInfoTemplate(template);
+    map.addLayer(csv);
+
 
     map.on('load', function () {
         var myPoint = new Point(20.92, 46.11);
@@ -38,7 +69,7 @@ require([
 
         locations.push(myPoint);
 
-        drawStations();
+        // drawStations();
     });
 
     var symbol = new SimpleMarkerSymbol(
@@ -62,66 +93,22 @@ require([
         longitude = evt.mapPoint.getLongitude();
         point = new Graphic(evt.mapPoint, symbol);
 
-        var ok = false;
-        for (i = 0; i < stationss.length; i++) {
-            if((stationss[i].getLatitude() <= (latitude + 0.008) && stationss[i].getLatitude() >= (latitude - 0.008))
-                && (stationss[i].getLongitude() <= (longitude + 0.008) && stationss[i].getLongitude() >= (longitude - 0.008)))
-            {
-                ok = true;
-                break;
-            }
-        }
 
-        var ok2 = false;
-        for (i = 0; i < locations.length; i++) {
-            if((locations[i].getLatitude() <= (latitude + 0.008) && locations[i].getLatitude() >= (latitude - 0.008))
-                && (locations[i].getLongitude() <= (longitude + 0.008) && locations[i].getLongitude() >= (longitude - 0.008)))
-            {
-                ok2 = true;
-                break;
-            }
-        }
+        /* For checking not to interfere with existing points */
+        var layerCircles = $(".esriMapContainer circle");
+        var isInExistingPoints = layerCircles.filter(function(k, v) {return v === evt.target;}).length;
+        if (!isInExistingPoints) {
+            map.graphics.add(point);
 
-        var ok3 = false;
-        for (i = 0; i < issues.length; i++) {
-            if((issues[i].geometry.getLatitude() <= (latitude + 0.005) && issues[i].geometry.getLatitude() >= (latitude - 0.005))
-                && (issues[i].geometry.getLongitude() <= (longitude + 0.005) && issues[i].geometry.getLongitude() >= (longitude - 0.005)))
-            {
-                ok3 = true;
-                break;
-            }
-        }
+            var form = "<b>Latitude: </b>" + latitude + "<br><br> <b>Longitude: </b>" + longitude + "<br><br><form id='add_point'> Describe issue:<br><input type=" + "'text'" + "class='add_issue'" + "name=" + "'describe'" + "><br><br><input type=" + "'submit'" + " class='submit-incident' value=" + "'Submit'" + "></form> ";
 
-        if(ok === true || ok2 === true || ok3 === true) {
-            var content = null;
-            if(ok === true) {
-                content = "<b><u>Station</u></b><br><br><b>Latitude: </b>" + latitude + "<br><br> <b>Longitude: </b>" + longitude + "<br><br> <b>Other Information: </b>";
-            } else if (ok2 === true) {
-                var name = "<b>Location:</b> <u>";
-                if (longitude < 21.655) {
-                    name = name + "Semlac</u><br><br>";
-                } else {
-                    name = name + "Petris</u></b><br><br>";
-                }
-                content = name + "<b>Latitude: </b>" + latitude + "<br><br> <b>Longitude: </b>" + longitude + "<br><br> <b>Other Information: </b>";
-            } else {
-                content = "<b>Latitude: </b>" + latitude + "<br><br> <b>Longitude: </b>" + longitude + "<br><br>  <b>Issue Description: </b>" + description + "</b>";
-            }
-            map.infoWindow.setContent(content);
+            map.infoWindow.setContent(form);
             map.infoWindow.show(evt.mapPoint);
-            return;
+
+            if(!submitted)
+                removeMapClickBullet();
+            submitted = false;
         }
-
-        map.graphics.add(point);
-
-        var form = "<b>Latitude: </b>" + latitude + "<br><br> <b>Longitude: </b>" + longitude + "<br><br><form id='add_point'> Describe issue:<br><input type=" + "'text'" + "class='add_issue'" + "name=" + "'describe'" + "><br><br><input type=" + "'submit'" + " class='submit-incident' value=" + "'Submit'" + "></form> ";
-
-        map.infoWindow.setContent(form);
-        map.infoWindow.show(evt.mapPoint);
-
-        if(!submitted)
-            removeMapClickBullet();
-        submitted = false;
     });
 
     $(document).on("click", ".submit-incident", function(e) {
