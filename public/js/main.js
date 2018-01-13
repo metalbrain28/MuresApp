@@ -12,6 +12,7 @@ require([
     let lastPoint = null;
     var point = null;
     var stations = [];
+    var stationss = [];
     var submitted = false;
     var locations  = [];
     var issues = [];
@@ -62,9 +63,9 @@ require([
         point = new Graphic(evt.mapPoint, symbol);
 
         var ok = false;
-        for (i = 0; i < stations.length; i++) {
-            if((stations[i].getLatitude() <= (latitude + 0.008) && stations[i].getLatitude() >= (latitude - 0.008))
-                && (stations[i].getLongitude() <= (longitude + 0.008) && stations[i].getLongitude() >= (longitude - 0.008)))
+        for (i = 0; i < stationss.length; i++) {
+            if((stationss[i].getLatitude() <= (latitude + 0.008) && stationss[i].getLatitude() >= (latitude - 0.008))
+                && (stationss[i].getLongitude() <= (longitude + 0.008) && stationss[i].getLongitude() >= (longitude - 0.008)))
             {
                 ok = true;
                 break;
@@ -153,7 +154,7 @@ require([
                     var symbol = new SimpleMarkerSymbol().setColor(new Color('green'));
                     var graphic = new Graphic(myPoint, symbol);
                     map.graphics.add(graphic);
-                    stations.push(myPoint);
+                    stationss.push(myPoint);
                 });
             },
             function(error){
