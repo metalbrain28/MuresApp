@@ -13,6 +13,8 @@ require([
     'esri/symbols/SimpleMarkerSymbol',
     "esri/symbols/SimpleLineSymbol",
     'esri/Color',
+    'dojo/request',
+    'esri/geometry/Point',
     "dojo/domReady!"
 ], function (
     parser,
@@ -28,15 +30,19 @@ require([
     Graphic,
     SimpleMarkerSymbol,
     SimpleLineSymbol,
-    Color
+    Color,
+    request,
+    Point
 ) {
     ready(function () {
 
+        var map = null;
         var description = null;
         var latitude = null;
         var longitude = null;
         var submitted = false;
-        let lastPoint = null;
+        let lastPoint = null,
+            point = null;
         var issues = [];
 
 
@@ -49,7 +55,7 @@ require([
             dom.byId("title").innerHTML = response.itemInfo.item.title;
             dom.byId("subtitle").innerHTML = response.itemInfo.item.snippet;
 
-            var map = response.map;
+            map = response.map;
 
             //add the scalebar
             var scalebar = new Scalebar({
@@ -67,6 +73,7 @@ require([
             legendDijit.startup();
 
             handleMapExtraActions(map);
+            displayAllIncidents();
         });
 
         var symbol = new SimpleMarkerSymbol(
@@ -82,6 +89,8 @@ require([
 
         function handleMapExtraActions(map) {
             map.on("click", function(evt){
+
+                if (!isAuthenticated()) return;
 
                 latitude = evt.mapPoint.getLatitude();
                 longitude = evt.mapPoint.getLongitude();
@@ -104,27 +113,55 @@ require([
                     submitted = false;
                 }
             });
+        }
 
-            $(document).on("click", ".submit-incident", function(e) {
-                e.preventDefault();
+        $(document).on("click", ".submit-incident", function(e) {
+            e.preventDefault();
 
-                description = $('.add_issue').val();
-                $('.add_issue').val('');
-                submitted = true;
-                issues.push(point);
+            description = $('.add_issue').val();
+            submitted = true;
+            issues.push(point);
+
+            request.post("/incidents", {
+                data: {
+                    description: description,
+                    longitude: longitude,
+                    latitude: latitude
+                }
+            }).then(function(text){
+                console.log("The server returned: ", text);
 
                 map.graphics.add(point);
             });
+        });
 
-            function removeMapClickBullet() {
-                if (lastPoint) {
-                    map.graphics.remove(lastPoint);
-                }
-
-                lastPoint = point;
+        function removeMapClickBullet() {
+            if (lastPoint) {
+                map.graphics.remove(lastPoint);
             }
+
+            lastPoint = point;
         }
 
+        function displayAllIncidents() {
+            request.get("/incidents", {
+                handleAs: "json"
+            }).then(function(data){
+
+                let incidentPoint;
+                data.map(function(entry) {
+                    incidentPoint = new Point(entry.Longitude, entry.Latitude);
+                    var symbol = new SimpleMarkerSymbol().setColor(new Color('red'));
+                    var graphic = new Graphic(incidentPoint, symbol);
+                    map.graphics.add(graphic);
+                });
+
+            });
+        }
+
+        function isAuthenticated() {
+            return $("#user_logout").length;
+        }
     });
 
 });

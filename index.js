@@ -115,20 +115,31 @@ app.post('/logout', function(req, res) {
     }
 });
 
-app.get('/add', (req, res) => {
-    console.log("Latitude: " + req.query['latitude']);
-    console.log("Longitude: " + req.query['longitude']);
+app.get('/incidents', (req, res) => {
+    let sql = `SELECT * FROM Incidents WHERE Solved=0`;
 
-    res.render('add', {
-        latitude: req.query['latitude'],
-        longitude: req.query['longitude'],
+    db.all(sql, [], (err, rows) => {
+        if (err) {
+            throw err;
+        }
+
+        res.send(JSON.stringify(rows));
     });
 });
 
 app.post('/incidents', (req, res) => {
-    var nodemailer = require('nodemailer');
 
-    var transporter = nodemailer.createTransport({
+    let description = req.body.description;
+    let longitude = req.body.longitude;
+    let latitude = req.body.latitude;
+    let userID = req.session.user.id;
+
+    registerIncident(description, longitude, latitude, userID);
+
+
+    let nodemailer = require('nodemailer');
+
+    let transporter = nodemailer.createTransport({
         service: 'gmail',
         auth: {
             user: 'potato.cat001@gmail.com',
@@ -136,9 +147,9 @@ app.post('/incidents', (req, res) => {
         }
     });
 
-    var mailOptions = {
+    let mailOptions = {
         from: 'potato.cat001@gmail.com',
-        to: 'moisa.anca10@gmail.com',
+        to: 'andreea.dobroteanu@gmail.com',
         subject: 'Sending Email using Node.js',
         text: 'That was easy!'
     };
@@ -150,7 +161,22 @@ app.post('/incidents', (req, res) => {
             console.log('Email sent!');
         }
     });
+
+    res.status(200).send("OK");
 });
+
+function registerIncident(description, longitude, latitude, userID) {
+    let stmt = db.prepare("INSERT INTO Incidents(Description, Longitude, Latitude, ReportedByUserID) VALUES (?,?,?,?)");
+
+    stmt.run([
+        description,
+        longitude,
+        latitude,
+        userID
+    ]);
+
+    return stmt.finalize();
+}
 
 
 app.listen(3001, () => console.log('Example app listening on port 3001!'));
