@@ -116,7 +116,8 @@ app.post('/logout', function(req, res) {
 });
 
 app.get('/incidents', (req, res) => {
-    let sql = `SELECT * FROM Incidents WHERE Solved=0`;
+    let sql = "SELECT Incidents.Description, Incidents.Longitude, Incidents.Latitude, Incidents.ReportedByUserID, " +
+        "Users.Name FROM Incidents LEFT JOIN Users ON Incidents.ReportedByUserID=Users.ID WHERE Incidents.Solved=0";
 
     db.all(sql, [], (err, rows) => {
         if (err) {
