@@ -42,10 +42,12 @@ require([
         var longitude = null;
         var submitted = false;
         let lastPoint = null,
-            point = null;
+            point = null,
+            lastClickedPoint = null;
         var issues = [];
         let incidents = [];
         var limits = [];
+        var allPoints = [];
 
         parser.parse();
 
@@ -112,28 +114,26 @@ require([
 
             map.on("click", function(evt){
                 console.log(incidents);
-                if (!isAuthenticated()) return;
 
                 latitude = evt.mapPoint.getLatitude();
                 longitude = evt.mapPoint.getLongitude();
-                point = new Graphic(evt.mapPoint, symbol);
+                lastPoint = new Graphic(evt.mapPoint, symbol);
 
                 /* For checking not to interfere with existing points */
                 var layerCircles = $(".esriMapContainer circle");
                 var isInFirstLayer = layerCircles.filter(function(k, v) {return v === evt.target;}).length;
-                if (!isInFirstLayer) {
-                    map.graphics.add(point);
 
+                var customLayer = $("#map_graphics_layer circle");
+                var isInCustomLayer = customLayer.filter(function(k, v) {return v === evt.target;}).length;
+
+                if (!isInFirstLayer) {
+
+                    if (!isAuthenticated()) return;
                     var form = "<b>Latitude: </b>" + latitude + "<br><br> <b>Longitude: </b>" + longitude + "<br><br><form id='add_point'> Describe issue:<br><input type=" + "'text'" + "class='add_issue'" + "name=" + "'describe'" + "><br><br><input type=" + "'submit'" + " class='submit-incident' value=" + "'Submit'" + "></form> ";
 
                     map.infoWindow.setContent(form);
                     map.infoWindow.show(evt.mapPoint);
-
-                    if(!submitted)
-                        removeMapClickBullet();
-                    submitted = false;
                 }
-
 
                 var customLayer = $("#map_graphics_layer circle");
                 var isInCustomLayer = customLayer.filter(function(k, v) {return v === evt.target;}).length;
@@ -150,7 +150,18 @@ require([
 
                     var form = null;
                     if (ok === true) {
-                        form = "<b>Latitude: </b>" + incidents[i].Latitude + "<br><br> <b>Longitude: </b>" + incidents[i].Longitude + "<br><br>  <b>Reporter: </b>" + incidents[i].Name + "</b>" + "<br><br>  <b>Issue Description: </b>" + incidents[i].Description + "</b>";
+
+                        var isAdmin = $("#user_logout").data("isadmin");
+                        var markAsSolvedButton = isAdmin ? "<button class='mark-as-solved btn btn-warning' data-id='" + incidents[i].ID +
+                            "'>Mark as solved</button>" : "";
+
+                        form = "<b>Latitude: </b>" + incidents[i].Latitude + "<br><br> <b>Longitude: </b>" +
+                            incidents[i].Longitude + "<br><br>  <b>Reporter: </b>" + incidents[i].Name + "</b>" +
+                            "<br><br>  <b>Issue Description: </b>" + incidents[i].Description + "</b>" +
+                            "<br><br> <b>Added: </b>" + incidents[i].Timestamp+ "</b><br>" +
+                            markAsSolvedButton;
+
+                        lastClickedPoint = evt.target;
                     } else if((limits[0].latitude <= (latitude + 0.013) && limits[0].latitude >= (latitude - 0.013))
                         && (limits[0].longitude <= (longitude + 0.013) && limits[0].longitude >= (longitude - 0.013)))
                     {
@@ -163,10 +174,6 @@ require([
 
                     map.infoWindow.setContent(form);
                     map.infoWindow.show(evt.mapPoint);
-
-                  //  if(!submitted)
-                        removeMapClickBullet();
-                   // submitted = false;
                 }
             });
         }
@@ -175,8 +182,6 @@ require([
             e.preventDefault();
 
             description = $('.add_issue').val();
-            //submitted = true;
-            issues.push(point);
 
             request.post("/incidents", {
                 data: {
@@ -185,9 +190,34 @@ require([
                     latitude: latitude
                 }
             }).then(function(text){
-                console.log("The server returned: ", text);
+                incidents.push({
+                    Description: description,
+                    Longitude: longitude,
+                    Latitude: latitude,
+                    Name: $("#user_logout").data("username")
+                });
 
-                map.graphics.add(point);
+                map.graphics.add(lastPoint);
+                allPoints.push(lastPoint);
+                map.infoWindow.hide();
+            });
+        });
+
+        $(document).on("click", ".mark-as-solved", function(e) {
+            let $el = $(e.target);
+            let id = $el.data("id");
+
+            request.post("/solve", {
+                data: {
+                    id: id
+                }
+            }).then(function(){
+
+                map.graphics.remove(lastClickedPoint);
+                $(lastClickedPoint).remove();
+                lastClickedPoint = null;
+
+                $(".esriPopup.esriPopupVisible").removeClass("esriPopupVisible").addClass("esriPopupHidden");
             });
         });
 
@@ -219,14 +249,6 @@ require([
 
         }
 
-        function removeMapClickBullet() {
-            if (lastPoint) {
-                map.graphics.remove(lastPoint);
-            }
-
-            lastPoint = point;
-        }
-
         function hideAll() {
             $($("#map_defaultBasemap").next()[0]).css("display", "none");
             $("#csv_565_0_layer").css("display", "none");
@@ -246,6 +268,7 @@ require([
                     map.graphics.add(graphic);
 
                     incidents.push(entry);
+                    allPoints.push(graphic);
                 });
             });
         }

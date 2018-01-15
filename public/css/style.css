@@ -5,6 +5,8 @@ html, body, #border-container {
 
 #map {
     min-height: 100%;
+    padding: 0;
+    margin-top: 42px;
 }
 
 .titlePane {
@@ -48,11 +50,26 @@ body {
 
 #rightPane {
     background-color: #E8E8E8;
-    margin: 5px;
     width: 20%;
+    margin-top: 42px;
 }
 
-#map {
-    margin: 5px;
-    padding: 0;
+button.mark-as-solved.btn.btn-warning {
+    margin-top: 15px;
+    border-radius: 0;
 }
+
+#header {
+    display: none;
+}
+
+@media (max-width: 991px) {
+    .navbar-expand-lg>.container, .navbar-expand-lg>.container-fluid {
+        display: inline-block;
+    }
+
+    .container>.navbar-header, .container-fluid>.navbar-header, .container>.navbar-collapse, .container-fluid>.navbar-collapse {
+        float: right;
+    }
+}
+

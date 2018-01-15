@@ -5,6 +5,8 @@ const sqlite3 = require('sqlite3').verbose();
 const bcrypt = require('bcrypt');
 const saltRounds = 10;
 const session = require('express-session');
+const Promise = require('bluebird');
+const moment = require('moment');
 
 let db = new sqlite3.Database('river.db', sqlite3.OPEN_READWRITE, (err) => {
     if (err) {
@@ -31,6 +33,15 @@ app.use(session({
     resave: true,
     saveUninitialized: false
 }));
+
+let nodemailer = require('nodemailer');
+let transporter = nodemailer.createTransport({
+    service: 'gmail',
+    auth: {
+        user: 'potato.cat001@gmail.com',
+        pass: 'ilikepotatoes'
+    }
+});
 
 app.get('/', (req, res) => {
     res.render('index', req.session.user);
@@ -64,13 +75,14 @@ app.post('/register', (req, res) => {
             ]);
 
             stmt.finalize();
+            
+            res.send(JSON.stringify({
+                name: userData.name
+            }));
         });
 
     });
 
-    res.send(JSON.stringify({
-        name: userData.name
-    }));
 });
 
 app.post('/login', (req, res) => {
@@ -83,19 +95,22 @@ app.post('/login', (req, res) => {
             throw err;
         }
 
-        if (!row || typeof(row) === "undefined") {
+        if (!row || row === undefined) {
             res.status(400).json({error: "Not found."});
+            return;
         }
 
         bcrypt.compare(userData.password, row.Password).then(function(isValid) {
             if (isValid) {
                 req.session.user = {
                     id: row.ID,
-                    name: row.Name
+                    name: row.Name,
+                    isAdmin: row.IsAdmin
                 };
 
                 res.status(200).json({
-                    name: userData.name
+                    name: userData.name,
+                    isAdmin: row.isAdmin
                 });
             } else {
                 res.status(400).json({error: "Invalid password."});
@@ -115,9 +130,28 @@ app.post('/logout', function(req, res) {
     }
 });
 
+app.post('/solve', (req, res) => {
+    let data = [1, req.body.id];
+    let sql = `UPDATE Incidents
+            SET Solved = ?
+            WHERE ID = ?`;
+
+    db.run(sql, data, function(err) {
+        if (err) {
+            res.status(500).send(err.message);
+            return;
+        }
+
+        res.status(200).json({
+            solved: true
+        });
+    });
+});
+
 app.get('/incidents', (req, res) => {
-    let sql = "SELECT Incidents.Description, Incidents.Longitude, Incidents.Latitude, Incidents.ReportedByUserID, " +
-        "Users.Name FROM Incidents LEFT JOIN Users ON Incidents.ReportedByUserID=Users.ID WHERE Incidents.Solved=0";
+    let sql = "SELECT Incidents.ID, Incidents.Description, Incidents.Longitude, Incidents.Latitude, " +
+        "Incidents.ReportedByUserID, Incidents.Timestamp, Users.Name FROM Incidents LEFT JOIN Users " +
+        "ON Incidents.ReportedByUserID=Users.ID WHERE Incidents.Solved=0";
 
     db.all(sql, [], (err, rows) => {
         if (err) {
@@ -133,47 +167,65 @@ app.post('/incidents', (req, res) => {
     let description = req.body.description;
     let longitude = req.body.longitude;
     let latitude = req.body.latitude;
-    let userID = req.session.user.id;
+    let userID = req.session.user.id || 4;
+    let date = moment().format('LLLL');
 
-    registerIncident(description, longitude, latitude, userID);
+    registerIncident(description, longitude, latitude, userID, date);
 
 
-    let nodemailer = require('nodemailer');
+    getAllUsers().then((data) => {
+        data.map((user) => {
+            console.log(user.Email);
 
-    let transporter = nodemailer.createTransport({
-        service: 'gmail',
-        auth: {
-            user: 'potato.cat001@gmail.com',
-            pass: 'ilikepotatoes'
-        }
-    });
+            let mailText = "The user " + user.Name + " marked a new polluted zone.\n\n" +
+                "It has the following description: \n\n" + description + "\n\nHave a nice day! \n" +
+                "MuresApp";
 
-    let mailOptions = {
-        from: 'potato.cat001@gmail.com',
-        to: 'andreea.dobroteanu@gmail.com',
-        subject: 'Sending Email using Node.js',
-        text: 'That was easy!'
-    };
+            let mailOptions = {
+                from: 'potato.cat001@gmail.com',
+                to: user.Email,
+                subject: '[MuresApp] Pollution Alert',
+                text: mailText
+            };
 
-    transporter.sendMail(mailOptions, function(error, info){
-        if (error) {
-            console.log(error);
-        } else {
-            console.log('Email sent!');
-        }
+            transporter.sendMail(mailOptions, function(error, info){
+                if (error) {
+                    console.log(error);
+                } else {
+                    console.log('Email sent!');
+                }
+            });
+        });
     });
 
     res.status(200).send("OK");
 });
 
-function registerIncident(description, longitude, latitude, userID) {
-    let stmt = db.prepare("INSERT INTO Incidents(Description, Longitude, Latitude, ReportedByUserID) VALUES (?,?,?,?)");
+function getAllUsers() {
+
+    return new Promise(function (resolve, reject) {
+        let sql = `SELECT * FROM Users`;
+
+        db.all(sql, [], (err, rows) => {
+            if (err) {
+                throw err;
+            }
+
+            resolve(rows);
+        });
+    });
+
+}
+
+function registerIncident(description, longitude, latitude, userID, date) {
+    let stmt = db.prepare("INSERT INTO Incidents(Description, Longitude, Latitude, ReportedByUserID, Timestamp) VALUES (?,?,?,?,?)");
 
     stmt.run([
         description,
         longitude,
         latitude,
-        userID
+        userID,
+        date
     ]);
 
     return stmt.finalize();
