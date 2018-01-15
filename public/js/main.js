@@ -51,7 +51,7 @@ require([
 
         //if accessing webmap from a portal outside of ArcGIS Online, uncomment and replace path with portal URL
         //arcgisUtils.arcgisUrl = "https://pathto/portal/sharing/content/items";
-        arcgisUtils.createMap("353ec0f534254837bc775fe0d20c16db", "map", {
+        arcgisUtils.createMap("977c4613314b4055b50309181eeae14c", "map", {
             mapOptions: {
                 center: [21.655, 46.075],
                 zoom:9
@@ -106,8 +106,11 @@ require([
             map.graphics.add(graphic);
             limits.push({name: "Petris", longitude: 22.352631835936794, latitude: 46.00922633069789});
 
-            map.on("click", function(evt){
+            toggleNitrateLayer();
+            toggleCatchmentLayer();
+            toggleRefinedLayer();
 
+            map.on("click", function(evt){
                 console.log(incidents);
                 if (!isAuthenticated()) return;
 
@@ -188,12 +191,46 @@ require([
             });
         });
 
+        function toggleNitrateLayer() {
+
+            $("#legend_csv_9245_0_fc_csv_9245_0").click(function () {
+
+                hideAll();
+                $("#csv_9245_0_layer").css("display", "block");
+            });
+        }
+
+        function toggleCatchmentLayer() {
+
+            $("#legend_csv_565_0_fc_csv_565_0").click(function () {
+
+                hideAll();
+                $("#csv_565_0_layer").css("display", "block");
+            });
+        }
+
+        function toggleRefinedLayer() {
+
+            $("#legend_csv_5278_0_fc_csv_5278_0").click(function () {
+
+                hideAll();
+                $($("#map_defaultBasemap").next()[0]).css("display", "block")
+            });
+
+        }
+
         function removeMapClickBullet() {
             if (lastPoint) {
                 map.graphics.remove(lastPoint);
             }
 
             lastPoint = point;
+        }
+
+        function hideAll() {
+            $($("#map_defaultBasemap").next()[0]).css("display", "none");
+            $("#csv_565_0_layer").css("display", "none");
+            $("#csv_9245_0_layer").css("display", "none");
         }
 
         function displayAllIncidents() {
