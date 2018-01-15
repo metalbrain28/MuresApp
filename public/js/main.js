@@ -44,6 +44,7 @@ require([
         let lastPoint = null,
             point = null;
         var issues = [];
+        let incidents = [];
 
 
         parser.parse();
@@ -105,6 +106,7 @@ require([
 
             map.on("click", function(evt){
 
+                console.log(incidents);
                 if (!isAuthenticated()) return;
 
                 latitude = evt.mapPoint.getLatitude();
@@ -180,8 +182,9 @@ require([
                     var symbol = new SimpleMarkerSymbol().setColor(new Color('red'));
                     var graphic = new Graphic(incidentPoint, symbol);
                     map.graphics.add(graphic);
-                });
 
+                    incidents.push(entry);
+                });
             });
         }
 
