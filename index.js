@@ -7,6 +7,7 @@ const saltRounds = 10;
 const session = require('express-session');
 const Promise = require('bluebird');
 const moment = require('moment');
+var cookieParser = require('cookie-parser');
 
 let db = new sqlite3.Database('river.db', sqlite3.OPEN_READWRITE, (err) => {
     if (err) {
@@ -18,7 +19,12 @@ let db = new sqlite3.Database('river.db', sqlite3.OPEN_READWRITE, (err) => {
 //body-parser
 var bodyParser = require('body-parser');
 app.use(bodyParser.json());
-app.use(bodyParser.urlencoded({ extended: true }));
+app.use(bodyParser.urlencoded({
+    extended: true
+}));
+
+// cookie-parser
+app.use(cookieParser());
 
 //Set rendering engines
 app.engine('html', mustacheExpress());
@@ -31,7 +37,12 @@ app.use(express.static(__dirname + '/public'));
 app.use(session({
     secret: 'i like potatoes dunno',
     resave: true,
-    saveUninitialized: false
+    saveUninitialized: false,
+    cookie: {
+        maxAge: 365 * 24 * 60 * 60 * 1000,
+        httpOnly: false,
+        secure: false
+    },
 }));
 
 let nodemailer = require('nodemailer');
@@ -62,8 +73,8 @@ app.get('/stations', (req, res) => {
 app.post('/register', (req, res) => {
     let userData = req.body;
 
-    bcrypt.hash(userData.pass, saltRounds, function(err, hash) {
-        db.serialize(function() {
+    bcrypt.hash(userData.pass, saltRounds, function (err, hash) {
+        db.serialize(function () {
             let stmt = db.prepare("INSERT INTO Users(Name, Email, Password, Phone, isAdmin) VALUES (?,?,?,?,?)");
 
             stmt.run([
@@ -75,7 +86,7 @@ app.post('/register', (req, res) => {
             ]);
 
             stmt.finalize();
-            
+
             res.send(JSON.stringify({
                 name: userData.name
             }));
@@ -96,11 +107,13 @@ app.post('/login', (req, res) => {
         }
 
         if (!row || row === undefined) {
-            res.status(400).json({error: "Not found."});
+            res.status(400).json({
+                error: "Not found."
+            });
             return;
         }
 
-        bcrypt.compare(userData.password, row.Password).then(function(isValid) {
+        bcrypt.compare(userData.password, row.Password).then(function (isValid) {
             if (isValid) {
                 req.session.user = {
                     id: row.ID,
@@ -113,18 +126,23 @@ app.post('/login', (req, res) => {
                     isAdmin: row.isAdmin
                 });
             } else {
-                res.status(400).json({error: "Invalid password."});
+                res.status(400).json({
+                    error: "Invalid password."
+                });
             }
         });
     });
 });
 
-app.post('/logout', function(req, res) {
+app.post('/logout', function (req, res) {
 
     let sess = req.session.user;
-    if(sess){
+    if (sess) {
         req.session.user = null;
-        res.json({ 'success': 200, 'message': "Successfully logged out" });
+        res.json({
+            'success': 200,
+            'message': "Successfully logged out"
+        });
     } else {
         res.status(200).send({});
     }
@@ -136,7 +154,7 @@ app.post('/solve', (req, res) => {
             SET Solved = ?
             WHERE ID = ?`;
 
-    db.run(sql, data, function(err) {
+    db.run(sql, data, function (err) {
         if (err) {
             res.status(500).send(err.message);
             return;
@@ -188,7 +206,7 @@ app.post('/incidents', (req, res) => {
                 text: mailText
             };
 
-            transporter.sendMail(mailOptions, function(error, info){
+            transporter.sendMail(mailOptions, function (error, info) {
                 if (error) {
                     console.log(error);
                 } else {
@@ -234,6 +252,6 @@ function registerIncident(description, longitude, latitude, userID, date) {
 
 app.listen(3001, () => console.log('Example app listening on port 3001!'));
 
-process.on('exit', function() {
+process.on('exit', function () {
     db.close();
 });
